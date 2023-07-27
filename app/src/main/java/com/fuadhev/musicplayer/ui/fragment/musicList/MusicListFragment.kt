@@ -11,15 +11,20 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.RequiresApi
 import androidx.databinding.DataBindingUtil
+import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.fuadhev.musicplayer.R
 import com.fuadhev.musicplayer.databinding.FragmentMusicListBinding
 import com.fuadhev.musicplayer.entity.Music
 import com.fuadhev.musicplayer.ui.adapter.MusicAdapter
+import com.fuadhev.musicplayer.ui.adapter.MusicClickListener
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
+import kotlin.math.log
+import kotlin.random.Random
 
 
-class MusicListFragment : Fragment(),EasyPermissions.PermissionCallbacks {
+class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
 
     //    Glide.with(this)
 //    .load(R.drawable.your_drawable_resource) // Drawable kaynağını belirtin
@@ -29,9 +34,15 @@ class MusicListFragment : Fragment(),EasyPermissions.PermissionCallbacks {
     private val RC_NOTIFICATION_PERMISSION = 456
     private lateinit var binding: FragmentMusicListBinding
     private val musicAdapter by lazy {
-        MusicAdapter(emptyList())
+        MusicAdapter(object : MusicClickListener {
+            override fun musicClickListener(bundle: Bundle) {
+                findNavController().navigate(R.id.action_musicListFragment_to_musicFragment,bundle)
+            }
+
+        }, emptyList())
     }
-    private lateinit var musicList:ArrayList<Music>
+    private val musicBackgrounds = arrayOf("b1", "b2", "b3", "b4", "b5", "b6")
+    private lateinit var musicList: ArrayList<Music>
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -40,13 +51,20 @@ class MusicListFragment : Fragment(),EasyPermissions.PermissionCallbacks {
         // Inflate the layout for this fragment
         return binding.root
     }
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        musicList = ArrayList()
+        setRecyclerview()
         checkPermission()
 
 
+    }
+
+    private fun setRecyclerview() {
+        binding.musicRv.layoutManager = LinearLayoutManager(requireContext())
+        binding.musicRv.adapter = musicAdapter
     }
 
 
@@ -79,8 +97,14 @@ class MusicListFragment : Fragment(),EasyPermissions.PermissionCallbacks {
                 val albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID))
                 val album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM))
                 val artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST))
-                val duration = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.DURATION))
+                val duration =
+                    cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.DURATION))
 
+                val randomIndex = Random.nextInt(musicBackgrounds.size)
+                val img = musicBackgrounds[randomIndex]
+
+                val music = Music(title, artist, album, data, img, duration)
+                musicList.add(music)
                 Log.e("title", title)
                 Log.e("data", data)
                 Log.e("albumId", albumId.toString())
@@ -88,10 +112,9 @@ class MusicListFragment : Fragment(),EasyPermissions.PermissionCallbacks {
                 Log.e("artist", artist)
                 Log.e("duration", duration.toString())
             }
+            musicAdapter.updateList(musicList)
         }
     }
-
-
 
 
 //    private fun loadMusic() {
@@ -143,15 +166,16 @@ class MusicListFragment : Fragment(),EasyPermissions.PermissionCallbacks {
 //    }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private fun checkPermission(){
+    private fun checkPermission() {
 
         if (EasyPermissions.hasPermissions(
                 requireActivity(),
-                android.Manifest.permission.READ_EXTERNAL_STORAGE,
+//                android.Manifest.permission.READ_EXTERNAL_STORAGE,
                 android.Manifest.permission.READ_MEDIA_AUDIO
             )
         ) {
             loadMusic()
+            Log.e("TAG", "checkPermission: ")
             // İzin zaten alındı, devam etmek için gerekli işlemleri yapabilirsiniz
 
         } else {
@@ -182,7 +206,6 @@ class MusicListFragment : Fragment(),EasyPermissions.PermissionCallbacks {
             )
         }
     }
-
 
 
     override fun onRequestPermissionsResult(

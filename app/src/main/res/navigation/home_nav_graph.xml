@@ -9,5 +9,14 @@
         android:id="@+id/musicListFragment"
         android:name="com.fuadhev.musicplayer.ui.fragment.musicList.MusicListFragment"
         android:label="MusicListFragment"
-        tools:layout="@layout/fragment_music_list"/>
+        tools:layout="@layout/fragment_music_list">
+        <action
+            android:id="@+id/action_musicListFragment_to_musicFragment"
+            app:destination="@id/musicFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/musicFragment"
+        android:name="com.fuadhev.musicplayer.ui.fragment.music.MusicFragment"
+        android:label="MusicFragment"
+        tools:layout="@layout/fragment_music"/>
 </navigation>

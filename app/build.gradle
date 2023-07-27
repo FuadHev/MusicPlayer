@@ -2,8 +2,11 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-kapt'
+    id 'kotlin-parcelize'
     id 'androidx.navigation.safeargs.kotlin'
 }
+
+
 
 android {
     namespace 'com.fuadhev.musicplayer'
@@ -13,6 +16,7 @@ android {
         viewBinding true
         dataBinding true
     }
+
 
     defaultConfig {
         applicationId "com.fuadhev.musicplayer"
@@ -72,7 +76,12 @@ dependencies {
     implementation 'pub.devrel:easypermissions:3.0.0'
     implementation 'com.github.bumptech.glide:glide:4.15.1'
     // For developers using the Android Support Library
-    implementation 'com.chibde:audiovisualizer:2.2.0'
-    implementation 'pub.devrel:easypermissions:2.0.1'
-//    implementation 'com.gauravk.audiovisualizer:audiovisualizer:0.9.2'
+    implementation 'pub.devrel:easypermissions:3.0.0'
+    implementation "io.github.gautamchibde:audiovisualizer:2.2.5"
+    implementation 'jp.wasabeef:blurry:4.0.1'
+    implementation 'de.hdodenhof:circleimageview:3.1.0'
+
+    implementation "com.github.realgearinc:multi-sliding-up-panel:1.2.4"
+
+
 }

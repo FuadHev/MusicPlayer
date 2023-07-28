@@ -1,11 +1,10 @@
-package com.fuadhev.musicplayer
+package com.fuadhev.musicplayer.root
 
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.annotation.RequiresApi
-import pub.devrel.easypermissions.AppSettingsDialog
-import pub.devrel.easypermissions.EasyPermissions
+import com.fuadhev.musicplayer.R
 
 class MainActivity : AppCompatActivity() {
     private  val RC_STORAGE_PERMISSION = 123

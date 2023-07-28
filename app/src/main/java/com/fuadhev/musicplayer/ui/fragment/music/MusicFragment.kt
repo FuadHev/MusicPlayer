@@ -29,6 +29,7 @@ class MusicFragment : Fragment() {
     private var musicService: MusicPlayerService? = null
     private var isMusicServiceBound = false
     private var position=0
+    private var currentDuration:Int?=null
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as MusicPlayerService.MusicPlayerBinder
@@ -58,24 +59,62 @@ class MusicFragment : Fragment() {
         return binding.root
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    override fun onStart() {
+        super.onStart()
         val bundle = arguments
         // duzgun yol olmadigini bilirem sadece asand olsun deye etmisem
-       allmusicList = bundle?.getParcelableArrayList<Music>("musics")?: emptyList<Music>()
+        allmusicList = bundle?.getParcelableArrayList<Music>("musics")?: emptyList<Music>()
         position = bundle?.getInt("position")?:0
 
-        binding.play.setOnClickListener {
+        val intent = Intent(requireContext(), MusicPlayerService::class.java)
+        intent.putExtra("song_index", position)
+        intent.putParcelableArrayListExtra(
+            "musicList",
+            allmusicList as java.util.ArrayList<out Parcelable>
+        )
+        requireContext().bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+    }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+
+        Handler().postDelayed({
             initialiseSeekbar()
+        },500)
+//        binding.play.setOnClickListener {
+//            initialiseSeekbar()
+//            if (isMusicServiceBound && musicService != null) {
+//                if (musicService?.isMusicPlaying() == true) {
+//                    // Müzik çalıyorsa, duraklat
+//                    musicService?.pauseSong()
+//                } else {
+//                    // Müzik çalmıyorsa, seçili şarkıyı çal
+//                    musicService?.playSong(allmusicList[position].path)
+//                }
+//            }
+//        }
+
+
+        binding.play.setOnClickListener {
+
             if (isMusicServiceBound && musicService != null) {
+                initialiseSeekbar()
                 if (musicService?.isMusicPlaying() == true) {
-                    // Müzik çalıyorsa, duraklat
+                    // Eğer müzik çalıyorsa, duraklat
                     musicService?.pauseSong()
                 } else {
-                    // Müzik çalmıyorsa, seçili şarkıyı çal
+
+                    // Eğer müzik duraksı ise, en son bilinen konumdan devam et
                     musicService?.playSong(allmusicList[position].path)
                 }
             }
+        }
+
+        binding.skipNext.setOnClickListener {
+            musicService?.skipToNextSong()
+        }
+        binding.skipPrevious.setOnClickListener {
+            musicService?.skipToPreviousSong()
         }
 
         binding.pause.setOnClickListener {
@@ -105,11 +144,8 @@ class MusicFragment : Fragment() {
     }
     private fun initialiseSeekbar(){
         val mp=musicService?.mediaPlayer
-
         binding.slider.max= musicService?.mediaPlayer?.duration!!
-
         val handler=Handler()
-
         handler.postDelayed(object :Runnable{
             override fun run() {
                 try {
@@ -119,21 +155,23 @@ class MusicFragment : Fragment() {
                     binding.slider.progress=0
                 }
             }
-
         },0)
-
     }
 
-    override fun onStart() {
-        super.onStart()
-        val intent = Intent(requireContext(), MusicPlayerService::class.java)
-        requireContext().bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+//    override fun onStart() {
+//        super.onStart()
 //        val intent = Intent(requireContext(), MusicPlayerService::class.java)
-//        intent.putExtra("song_path", allmusicList[position])
 //        intent.putExtra("song_index", position)
-//        intent.putParcelableArrayListExtra("musicList",allmusicList as java.util.ArrayList<out Parcelable>)
+//        intent.putParcelableArrayListExtra(
+//            "musicList",
+//            allmusicList as java.util.ArrayList<out Parcelable>
+//        )
 //        requireContext().bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-    }
+////        val intent = Intent(requireContext(), MusicPlayerService::class.java)
+////        intent.putExtra("song_path", allmusicList[position])
+////        intent.putParcelableArrayListExtra("musicList",allmusicList as java.util.ArrayList<out Parcelable>)
+////        requireContext().bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+//    }
 
 //    private fun playSong(songPath: String, songIndex: Int) {
 //        val intent = Intent(requireContext(), MusicPlayerService::class.java)

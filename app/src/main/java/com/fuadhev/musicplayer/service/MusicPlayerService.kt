@@ -25,12 +25,11 @@ class MusicPlayerService : Service() {
 
         if (intent?.action == ACTION_PLAY) {
 //            val songPath = intent.getStringExtra("song_path")
-//            songIndex = intent.getIntExtra("song_index", 0)
-//            songs= intent.getParcelableArrayListExtra<Music>("musicList") as ArrayList<Music>
 
 //            // Play the selected song
 //            playSong(songPath)
         }
+
 
 
         return START_NOT_STICKY
@@ -45,6 +44,15 @@ class MusicPlayerService : Service() {
 
     override fun onBind(intent: Intent): IBinder {
         Log.d(TAG, "onBind() called")
+        songs=ArrayList()
+        songIndex = intent.getIntExtra("song_index", 0)
+        songs= intent.getParcelableArrayListExtra<Music>("musicList") as ArrayList<Music>
+
+        mediaPlayer.setOnCompletionListener {
+            skipToNextSong()
+        }
+
+        playSong(songs[songIndex].path)
         return binder
     }
 
@@ -53,33 +61,43 @@ class MusicPlayerService : Service() {
         // Release the MediaPlayer object
         mediaPlayer.release()
     }
+    // Bu özel seekTo yöntemini ekleyin
+
 
     fun playSong(songPath: String?) {
-        if (songPath.isNullOrEmpty()) return
+//        if (songPath.isNullOrEmpty()) return
 
         try {
+            if (mediaPlayer.currentPosition==0){
+                Log.e("TAG", "playSong: ${mediaPlayer.currentPosition}", )
+                mediaPlayer.stop()
+                mediaPlayer.reset()
+
+                // Set the song path to the MediaPlayer object
+                mediaPlayer.setDataSource(songPath)
+
+                // Prepare the MediaPlayer object
+                mediaPlayer.prepare()
+
+                // Start playing the song
+                mediaPlayer.start()
+            }else{
+                mediaPlayer.start()
+            }
             // Stop any currently playing song
-            mediaPlayer.stop()
-            mediaPlayer.reset()
 
-            // Set the song path to the MediaPlayer object
-            mediaPlayer.setDataSource(songPath)
-
-            // Prepare the MediaPlayer object
-            mediaPlayer.prepare()
-
-            // Start playing the song
-            mediaPlayer.start()
         } catch (e: Exception) {
             Log.e(TAG, "Error playing song: ${e.message}")
         }
     }
+
     fun isMusicPlaying(): Boolean {
         return mediaPlayer.isPlaying
     }
     fun seekTo(progress: Int) {
         mediaPlayer.seekTo(progress)
     }
+    // Bu özel seekTo yöntemini ekleyin
 
     fun pauseSong() {
         if (mediaPlayer.isPlaying) {
@@ -93,13 +111,20 @@ class MusicPlayerService : Service() {
     }
 
     fun skipToNextSong() {
+        mediaPlayer.stop()
+        mediaPlayer.reset()
         songIndex = (songIndex + 1) % songs.size
         val nextSongPath = songs[songIndex].path
         playSong(nextSongPath)
     }
 
     fun skipToPreviousSong() {
-        songIndex = (songIndex - 1 + songs.size) % songs.size
+        mediaPlayer.stop()
+        mediaPlayer.reset()
+        songIndex = (songIndex - 1) % songs.size
+        if (songIndex<0){
+            songIndex=songs.size-1
+        }
         val previousSongPath = songs[songIndex].path
         playSong(previousSongPath)
     }

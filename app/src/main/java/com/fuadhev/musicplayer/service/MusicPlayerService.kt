@@ -1,12 +1,22 @@
 package com.fuadhev.musicplayer.service
 
-import android.app.Service
+import android.app.*
+import android.app.PendingIntent.FLAG_IMMUTABLE
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.media.MediaPlayer
 import android.os.Binder
+import android.os.Build
 import android.os.IBinder
+import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
+import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
+import com.fuadhev.musicplayer.R
 import com.fuadhev.musicplayer.entity.Music
+import com.fuadhev.musicplayer.root.MainActivity
 import com.fuadhev.musicplayer.utils.CurrentMusic
 
 class MusicPlayerService : Service() {
@@ -15,21 +25,37 @@ class MusicPlayerService : Service() {
     lateinit var mediaPlayer: MediaPlayer
     private lateinit var songs: ArrayList<Music>
     private var songIndex: Int = 0
-    private var currentMusic:String=""
+    private var currentMusic: String = ""
+    private lateinit var mediaSession: MediaSessionCompat
 
     override fun onCreate() {
         super.onCreate()
         mediaPlayer = MediaPlayer()
+        mediaSession = MediaSessionCompat(this, "Player Audio")
+        createNotificationChannel()
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand() called")
 
-        if (intent?.action == ACTION_PLAY) {
-//            val songPath = intent.getStringExtra("song_path")
-
-//            // Play the selected song
-//            playSong(songPath)
+        when (intent?.action) {
+            ACTION_PLAY_PAUSE -> {
+    //            val songPath = intent.getStringExtra("song_path")
+                if (isMusicPlaying()) {
+                    // Eğer müzik çalıyorsa, duraklat
+                    pauseSong()
+                } else {
+                    // Eğer müzik duraksı ise, en son bilinen konumdan devam et
+                    playSong(songs[songIndex].path)
+                }
+            }
+            ACTION_NEXT -> {
+                skipToNextSong()
+            }
+            ACTION_PREVIOUS -> {
+                skipToPreviousSong()
+            }
         }
 
 
@@ -44,11 +70,12 @@ class MusicPlayerService : Service() {
     private val binder = MusicPlayerBinder()
 
 
+    @RequiresApi(Build.VERSION_CODES.S)
     override fun onBind(intent: Intent): IBinder {
-        Log.d(TAG, "onBind() called")
         songs = ArrayList()
         songIndex = intent.getIntExtra("song_index", 0)
         songs = intent.getParcelableArrayListExtra<Music>("musicList") as ArrayList<Music>
+        Log.d("bbbb", "binderrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
 
         mediaPlayer.setOnCompletionListener {
             skipToNextSong()
@@ -67,11 +94,12 @@ class MusicPlayerService : Service() {
     // Bu özel seekTo yöntemini ekleyin
 
 
+    @RequiresApi(Build.VERSION_CODES.S)
     fun playSong(songPath: String?) {
 //        if (songPath.isNullOrEmpty()) return
-        Log.e("TAG", "songpath: ${songPath} ${CurrentMusic.currentMusic}")
+        Log.e("TAG", "songpath: $songPath $currentMusic")
         try {
-            if (mediaPlayer.currentPosition == 0 || songPath!=currentMusic) {
+            if (mediaPlayer.currentPosition == 0 || songPath != currentMusic) {
 
                 mediaPlayer.stop()
                 mediaPlayer.reset()
@@ -81,7 +109,9 @@ class MusicPlayerService : Service() {
 
                 // Prepare the MediaPlayer object
                 mediaPlayer.prepare()
-                currentMusic=songPath!!
+                currentMusic = songPath!!
+                val music=songs[songIndex]
+                showNotification(music.m_name,music.artist_name)
                 CurrentMusic.currentMusic = songPath
                 // Start playing the song
                 mediaPlayer.start()
@@ -115,6 +145,7 @@ class MusicPlayerService : Service() {
         mediaPlayer.reset()
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     fun skipToNextSong() {
         mediaPlayer.stop()
         mediaPlayer.reset()
@@ -124,6 +155,7 @@ class MusicPlayerService : Service() {
         playSong(nextSongPath)
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     fun skipToPreviousSong() {
         mediaPlayer.stop()
         mediaPlayer.reset()
@@ -137,11 +169,123 @@ class MusicPlayerService : Service() {
         playSong(previousSongPath)
     }
 
-    fun getCurrentPosition(): Int {
-        return mediaPlayer.currentPosition
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = "MusicPlayerChannelId"
+            val channelName = "Music Player"
+            val channelDescription = "Music Player Channel"
+
+            val notificationChannel = NotificationChannel(
+                channelId,
+                channelName,
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = channelDescription
+                enableLights(true)
+                lightColor = Color.BLUE
+            }
+
+            val notificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(notificationChannel)
+        }
     }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun showNotification(music_name:String,artist_name:String) {
+        val channelId = "MusicPlayerChannelId"
+
+        // Bildirim tıklandığında açılacak aktiviteyi ayarlayalım
+        val pendingIntent = Intent(this, MainActivity::class.java).let { intent ->
+            PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            )
+        }
+
+        // Bildirimde kullanılacak düğmelerin işlemleri için Intent oluşturalım
+        val playPauseIntent = Intent(this, MusicPlayerService::class.java).apply {
+            action = ACTION_PLAY_PAUSE
+
+        }
+        val previousIntent = Intent(this, MusicPlayerService::class.java).apply {
+            action = ACTION_PREVIOUS
+
+        }
+        val nextIntent = Intent(this, MusicPlayerService::class.java).apply {
+            action = ACTION_NEXT
+
+        }
+
+        val playPausePendingIntent: PendingIntent = PendingIntent.getService(
+            this,
+            0,
+            playPauseIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        )
+        val previousPendingIntent: PendingIntent = PendingIntent.getService(
+            this,
+            0,
+            previousIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        )
+        val nextPendingIntent: PendingIntent = PendingIntent.getService(
+            this,
+            0,
+            nextIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        )
+
+        // Bildirim oluşturma
+        val notification: Notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_launcher_background)
+            .setContentTitle("Müzik Çalıyor")
+            .setContentText("Müzik Adı")
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .addAction(R.drawable.skip_previous, "Previous", previousPendingIntent)
+            .addAction(R.drawable.play, "Play/Pause", playPausePendingIntent)
+            .addAction(R.drawable.skip_next, "Next", nextPendingIntent)
+            .build()
+
+        startForeground(1, notification)
+    }
+//    fun getCurrentPosition(): Int {
+//        return mediaPlayer.currentPosition
+//    }
 
     companion object {
         const val ACTION_PLAY = "com.fuadhev.musicplayer.action.PLAY"
+        const val ACTION_PLAY_PAUSE = "com.fuadhev.musicplayer.action.PLAY_PAUSE"
+        const val ACTION_PREVIOUS = "com.fuadhev.musicplayer.action.PREVIOUS"
+        const val ACTION_NEXT = "com.fuadhev.musicplayer.action.NEXT"
+    }
+}
+class MusicPlayerBroadcastReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context?, intent: Intent?) {
+        if (intent == null || context == null) return
+
+        when (intent.action) {
+            MusicPlayerService.ACTION_PLAY_PAUSE -> {
+                // Play/Pause eylemi burada işlenecek
+                val serviceIntent = Intent(context, MusicPlayerService::class.java)
+                serviceIntent.action = intent.action
+                context.startService(serviceIntent)
+            }
+            MusicPlayerService.ACTION_PREVIOUS -> {
+                // Previous eylemi burada işlenecek
+                val serviceIntent = Intent(context, MusicPlayerService::class.java)
+                serviceIntent.action = intent.action
+                context.startService(serviceIntent)
+            }
+            MusicPlayerService.ACTION_NEXT -> {
+                // Next eylemi burada işlenecek
+                val serviceIntent = Intent(context, MusicPlayerService::class.java)
+                serviceIntent.action = intent.action
+                context.startService(serviceIntent)
+            }
+        }
     }
 }

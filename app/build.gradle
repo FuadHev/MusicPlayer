@@ -80,8 +80,12 @@ dependencies {
     implementation "io.github.gautamchibde:audiovisualizer:2.2.5"
     implementation 'jp.wasabeef:blurry:4.0.1'
     implementation 'de.hdodenhof:circleimageview:3.1.0'
+    implementation 'androidx.media:media:1.6.0'
 
-    implementation "com.github.realgearinc:multi-sliding-up-panel:1.2.4"
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+
+
+//    implementation "com.github.realgearinc:multi-sliding-up-panel:1.2.4"
 
 
 }

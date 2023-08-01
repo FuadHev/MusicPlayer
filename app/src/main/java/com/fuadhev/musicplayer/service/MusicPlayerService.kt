@@ -7,13 +7,15 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import com.fuadhev.musicplayer.entity.Music
+import com.fuadhev.musicplayer.utils.CurrentMusic
 
 class MusicPlayerService : Service() {
 
     private val TAG = "MusicService"
-     lateinit var mediaPlayer: MediaPlayer
+    lateinit var mediaPlayer: MediaPlayer
     private lateinit var songs: ArrayList<Music>
     private var songIndex: Int = 0
+    private var currentMusic:String=""
 
     override fun onCreate() {
         super.onCreate()
@@ -44,13 +46,14 @@ class MusicPlayerService : Service() {
 
     override fun onBind(intent: Intent): IBinder {
         Log.d(TAG, "onBind() called")
-        songs=ArrayList()
+        songs = ArrayList()
         songIndex = intent.getIntExtra("song_index", 0)
-        songs= intent.getParcelableArrayListExtra<Music>("musicList") as ArrayList<Music>
+        songs = intent.getParcelableArrayListExtra<Music>("musicList") as ArrayList<Music>
 
         mediaPlayer.setOnCompletionListener {
             skipToNextSong()
         }
+
 
         playSong(songs[songIndex].path)
         return binder
@@ -66,10 +69,10 @@ class MusicPlayerService : Service() {
 
     fun playSong(songPath: String?) {
 //        if (songPath.isNullOrEmpty()) return
-
+        Log.e("TAG", "songpath: ${songPath} ${CurrentMusic.currentMusic}")
         try {
-            if (mediaPlayer.currentPosition==0){
-                Log.e("TAG", "playSong: ${mediaPlayer.currentPosition}", )
+            if (mediaPlayer.currentPosition == 0 || songPath!=currentMusic) {
+
                 mediaPlayer.stop()
                 mediaPlayer.reset()
 
@@ -78,10 +81,11 @@ class MusicPlayerService : Service() {
 
                 // Prepare the MediaPlayer object
                 mediaPlayer.prepare()
-
+                currentMusic=songPath!!
+                CurrentMusic.currentMusic = songPath
                 // Start playing the song
                 mediaPlayer.start()
-            }else{
+            } else {
                 mediaPlayer.start()
             }
             // Stop any currently playing song
@@ -94,6 +98,7 @@ class MusicPlayerService : Service() {
     fun isMusicPlaying(): Boolean {
         return mediaPlayer.isPlaying
     }
+
     fun seekTo(progress: Int) {
         mediaPlayer.seekTo(progress)
     }
@@ -115,6 +120,7 @@ class MusicPlayerService : Service() {
         mediaPlayer.reset()
         songIndex = (songIndex + 1) % songs.size
         val nextSongPath = songs[songIndex].path
+        CurrentMusic.currentMusic = nextSongPath
         playSong(nextSongPath)
     }
 
@@ -122,16 +128,19 @@ class MusicPlayerService : Service() {
         mediaPlayer.stop()
         mediaPlayer.reset()
         songIndex = (songIndex - 1) % songs.size
-        if (songIndex<0){
-            songIndex=songs.size-1
+        if (songIndex < 0) {
+            songIndex = songs.size - 1
         }
         val previousSongPath = songs[songIndex].path
+        CurrentMusic.currentMusic = previousSongPath
+
         playSong(previousSongPath)
     }
 
     fun getCurrentPosition(): Int {
         return mediaPlayer.currentPosition
     }
+
     companion object {
         const val ACTION_PLAY = "com.fuadhev.musicplayer.action.PLAY"
     }

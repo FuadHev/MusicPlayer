@@ -1,8 +1,11 @@
 package com.fuadhev.musicplayer.ui.fragment.musicList
 
 import android.annotation.SuppressLint
+import android.content.ComponentName
+import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.provider.MediaStore
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -16,8 +19,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.fuadhev.musicplayer.R
 import com.fuadhev.musicplayer.databinding.FragmentMusicListBinding
 import com.fuadhev.musicplayer.entity.Music
+import com.fuadhev.musicplayer.service.MusicPlayerService
 import com.fuadhev.musicplayer.ui.adapter.MusicAdapter
 import com.fuadhev.musicplayer.ui.adapter.MusicClickListener
+import com.fuadhev.musicplayer.utils.CurrentMusic
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
 import kotlin.math.log
@@ -39,6 +44,18 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
                 findNavController().navigate(R.id.action_musicListFragment_to_musicFragment,bundle)
             }
 
+            override fun checkMusicIsPlay(path: String): Boolean {
+                val currentMusic=CurrentMusic.currentMusic
+                if (currentMusic!=null){
+                    if (path==currentMusic){
+                        return true
+                    }
+                }else{
+                    return false
+                }
+                return false
+
+            }
         }, emptyList())
     }
     private val musicBackgrounds = arrayOf("b1", "b2", "b3", "b4", "b5", "b6")
@@ -58,6 +75,8 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
         musicList = ArrayList()
         setRecyclerview()
         checkPermission()
+
+
 
 
     }
@@ -94,7 +113,7 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
             while (cursor.moveToNext()) {
                 val title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE))
                 val data = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA))
-                val albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID))
+//                val albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID))
                 val album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM))
                 val artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST))
                 val duration =
@@ -105,65 +124,17 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
 
                 val music = Music(title, artist, album, data, img, duration)
                 musicList.add(music)
-                Log.e("title", title)
-                Log.e("data", data)
-                Log.e("albumId", albumId.toString())
-                Log.e("album", album)
-                Log.e("artist", artist)
-                Log.e("duration", duration.toString())
-            }
-            musicAdapter.updateList(musicList)
-        }
-    }
-
-
-//    private fun loadMusic() {
-//        val projection = arrayOf(
-//            MediaStore.Audio.Media.TITLE,
-//            MediaStore.Audio.Media.DATA,
-//            MediaStore.Audio.Media.ALBUM_ID,
-//            MediaStore.Audio.Media.ALBUM, // Albüm adı sütununu ekledik
-//            MediaStore.Audio.Media.ARTIST,
-//            MediaStore.Audio.Media.DURATION
-//        )
-//        val selection = "${MediaStore.Audio.Media.IS_MUSIC}!= 0"
-//        val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
-//
-//        requireActivity().contentResolver.query(
-//            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-//            projection,
-//            selection,
-//            null,
-//            sortOrder
-//        )?.use { cursor ->
-//            val titleColumn = cursor.getColumnIndex(MediaStore.Audio.Media.TITLE)
-//            val dataColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
-//            val albumIdColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID)
-//            val albumColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM) // Albüm sütununu ekledik
-//            val artistColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST)
-//            val durationColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DURATION)
-//
-//            while (cursor.moveToNext()) {
-//                val title = cursor.getString(titleColumn)
-//                val data = cursor.getString(dataColumn)
-//                val albumId = cursor.getLong(albumIdColumn)
-//                val album = cursor.getString(albumColumn) // Albüm adını alıyoruz
-//                val artist = cursor.getString(artistColumn)
-//                val duration = cursor.getLong(durationColumn)
-//
-//
-//                // İlgili bilgilerle yapmak istediğiniz işlemleri gerçekleştirebilirsiniz
-//                // Örneğin, bu bilgileri bir liste içine eklemek, görselleştirmek veya başka bir işlem yapmak
-//
 //                Log.e("title", title)
 //                Log.e("data", data)
 //                Log.e("albumId", albumId.toString())
 //                Log.e("album", album)
 //                Log.e("artist", artist)
 //                Log.e("duration", duration.toString())
-//            }
-//        }
-//    }
+            }
+            musicAdapter.updateList(musicList)
+        }
+    }
+
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun checkPermission() {

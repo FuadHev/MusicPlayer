@@ -1,12 +1,15 @@
 package com.fuadhev.musicplayer.ui.adapter
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.fuadhev.musicplayer.R
 import com.fuadhev.musicplayer.databinding.MusicItemBinding
 import com.fuadhev.musicplayer.entity.Music
 
@@ -23,9 +26,10 @@ class MusicAdapter(private val musicClickListener: MusicClickListener,private va
     override fun getItemCount(): Int {
         return musicList.size
     }
+
     @SuppressLint("NotifyDataSetChanged")
     fun updateList(newmusicList: List<Music>){
-        musicList=newmusicList
+        musicList= newmusicList
         notifyDataSetChanged()
     }
 
@@ -33,7 +37,16 @@ class MusicAdapter(private val musicClickListener: MusicClickListener,private va
         val music=musicList[position]
         val b=holder.view
 
+//        val context=holder.itemView.context
+
         b.musicName.text=music.m_name
+
+       if (musicClickListener.checkMusicIsPlay(music.path)){
+           b.musicItem.setBackgroundColor(Color.RED)
+        }else{
+            b.musicItem.setBackgroundColor(Color.WHITE)
+       }
+
 
         b.musicItem.setOnClickListener {
             val bundle= Bundle()
@@ -48,4 +61,6 @@ class MusicAdapter(private val musicClickListener: MusicClickListener,private va
 }
 interface MusicClickListener{
     fun musicClickListener(bundle:Bundle)
+
+    fun checkMusicIsPlay(path:String):Boolean
 }

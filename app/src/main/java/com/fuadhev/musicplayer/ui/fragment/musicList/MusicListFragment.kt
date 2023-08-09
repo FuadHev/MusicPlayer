@@ -39,26 +39,14 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
     private val RC_NOTIFICATION_PERMISSION = 456
     private lateinit var binding: FragmentMusicListBinding
     private val musicAdapter by lazy {
-        MusicAdapter(object : MusicClickListener {
+        MusicAdapter(this,object : MusicClickListener {
             override fun musicClickListener(bundle: Bundle) {
                 findNavController().navigate(R.id.action_musicListFragment_to_musicFragment,bundle)
             }
 
-            override fun checkMusicIsPlay(path: String): Boolean {
-                val currentMusic=CurrentMusic.currentMusic
-                if (currentMusic!=null){
-                    if (path==currentMusic){
-                        return true
-                    }
-                }else{
-                    return false
-                }
-                return false
-
-            }
         }, emptyList())
     }
-    private val musicBackgrounds = arrayOf("b1", "b2", "b3", "b4", "b5", "b6")
+    private val musicBackgrounds = arrayOf("b5", "b2", "b4", "b3", "b1", "b6")
     private lateinit var musicList: ArrayList<Music>
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -86,7 +74,6 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
         binding.musicRv.adapter = musicAdapter
     }
 
-
     @SuppressLint("Range")
     private fun loadMusic() {
         val projection = arrayOf(
@@ -113,7 +100,7 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
             while (cursor.moveToNext()) {
                 val title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE))
                 val data = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA))
-//                val albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID))
+                val albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID))
                 val album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM))
                 val artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST))
                 val duration =
@@ -122,14 +109,10 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
                 val randomIndex = Random.nextInt(musicBackgrounds.size)
                 val img = musicBackgrounds[randomIndex]
 
+
                 val music = Music(title, artist, album, data, img, duration)
                 musicList.add(music)
-//                Log.e("title", title)
-//                Log.e("data", data)
-//                Log.e("albumId", albumId.toString())
-//                Log.e("album", album)
-//                Log.e("artist", artist)
-//                Log.e("duration", duration.toString())
+
             }
             musicAdapter.updateList(musicList)
         }
@@ -139,41 +122,71 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun checkPermission() {
 
-        if (EasyPermissions.hasPermissions(
-                requireActivity(),
-//                android.Manifest.permission.READ_EXTERNAL_STORAGE,
-                android.Manifest.permission.READ_MEDIA_AUDIO
-            )
-        ) {
-            loadMusic()
-            Log.e("TAG", "checkPermission: ")
-            // İzin zaten alındı, devam etmek için gerekli işlemleri yapabilirsiniz
 
-        } else {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+            if (EasyPermissions.hasPermissions(
+                    requireActivity(),
+//                android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                    android.Manifest.permission.READ_MEDIA_AUDIO
+                )
+            ) {
+                loadMusic()
+                // İzin zaten alındı, devam etmek için gerekli işlemleri yapabilirsiniz
+            } else {
 //            // İzin alınmamış, iste
-            EasyPermissions.requestPermissions(
-                requireActivity(),
-                "The app requires external storage permission to run.",
-                RC_STORAGE_PERMISSION,
+                EasyPermissions.requestPermissions(
+                    requireActivity(),
+                    "The app requires external storage permission to run.",
+                    RC_STORAGE_PERMISSION,
+//                    android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                    android.Manifest.permission.READ_MEDIA_AUDIO,
+
+                )
+            }
+        }else{
+            if (EasyPermissions.hasPermissions(
+                    requireActivity(),
                 android.Manifest.permission.READ_EXTERNAL_STORAGE,
-                android.Manifest.permission.READ_MEDIA_AUDIO
-            )
+//                    android.Manifest.permission.READ_MEDIA_AUDIO
+                )
+            ) {
+                loadMusic()
+                // İzin zaten alındı, devam etmek için gerekli işlemleri yapabilirsiniz
+            } else {
+//            // İzin alınmamış, iste
+                EasyPermissions.requestPermissions(
+                    requireActivity(),
+                    "The app requires external storage permission to run.",
+                    RC_STORAGE_PERMISSION,
+                    android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                    android.Manifest.permission.READ_MEDIA_AUDIO,
+
+//                    android.Manifest.permission.READ_MEDIA_AUDIO
+                )
+            }
         }
+
 
         // Bildirim iznini kontrol et ve gerekirse iste
         if (EasyPermissions.hasPermissions(
                 requireActivity(),
-                android.Manifest.permission.POST_NOTIFICATIONS
+                android.Manifest.permission.POST_NOTIFICATIONS,
+                android.Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE,
+                android.Manifest.permission.ACCESS_NOTIFICATION_POLICY
+
             )
         ) {
+            Log.e("notification izni", "checkPermission: notification ", )
             // İzin zaten alındı, devam etmek için gerekli işlemleri yapabilirsiniz
         } else {
             // İzin alınmamış, iste
             EasyPermissions.requestPermissions(
                 requireActivity(),
                 "The app needs notification permission to control notifications.",
-                RC_NOTIFICATION_PERMISSION,
-                android.Manifest.permission.POST_NOTIFICATIONS
+                1,
+                android.Manifest.permission.POST_NOTIFICATIONS,
+                android.Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE,
+                android.Manifest.permission.ACCESS_NOTIFICATION_POLICY
             )
         }
     }
@@ -186,11 +199,15 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         // İzin sonuçlarını EasyPermissions'a iletin
+
+
+
         EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
     }
 
     override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
         // İzinler verildiğinde yapılacak işlemleri buraya ekleyebilirsiniz
+        loadMusic()
     }
 
     override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {

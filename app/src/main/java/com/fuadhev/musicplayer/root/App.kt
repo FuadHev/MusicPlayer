@@ -1,4 +1,7 @@
 package com.fuadhev.musicplayer.root
 
-class App {
+import android.app.Application
+
+class App:Application() {
+
 }

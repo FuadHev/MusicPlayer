@@ -5,15 +5,22 @@ import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Parcelable
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.View.GONE
+import android.view.View.VISIBLE
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.RecyclerView
 import com.fuadhev.musicplayer.R
 import com.fuadhev.musicplayer.databinding.MusicItemBinding
 import com.fuadhev.musicplayer.entity.Music
+import com.fuadhev.musicplayer.utils.CurrentMusic
 
-class MusicAdapter(private val musicClickListener: MusicClickListener,private var musicList:List<Music>):RecyclerView.Adapter<MusicAdapter.ViewHolder>() {
+class MusicAdapter(val owner:LifecycleOwner,private val musicClickListener: MusicClickListener,private var musicList:List<Music>):RecyclerView.Adapter<MusicAdapter.ViewHolder>() {
 
     inner class ViewHolder(val view:MusicItemBinding):RecyclerView.ViewHolder(view.root)
 
@@ -33,20 +40,33 @@ class MusicAdapter(private val musicClickListener: MusicClickListener,private va
         notifyDataSetChanged()
     }
 
+    @SuppressLint("DiscouragedApi", "ResourceAsColor")
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val music=musicList[position]
         val b=holder.view
-
+        val context=holder.itemView.context
 //        val context=holder.itemView.context
+        val resourceId = context.resources.getIdentifier(music.m_img, "drawable", context.packageName)
+        b.musicImg.setImageResource(resourceId)
 
         b.musicName.text=music.m_name
+        CurrentMusic.currentMusic.observe(owner){
+            if (it!=null){
+                if (it==music.path){
+                    b.musicItem.setBackgroundResource(R.drawable.isplay)
+                    b.lottie.visibility= VISIBLE
+                    b.lottie.playAnimation()
+                    b.musicName.requestFocus()
 
-       if (musicClickListener.checkMusicIsPlay(music.path)){
-           b.musicItem.setBackgroundColor(Color.RED)
-        }else{
-            b.musicItem.setBackgroundColor(Color.WHITE)
-       }
+                }else{
+                    b.musicItem.setBackgroundResource(R.drawable.noplay_bg)
+                    b.lottie.visibility=GONE
+                    b.lottie.cancelAnimation()
 
+                }
+            }
+
+        }
 
         b.musicItem.setOnClickListener {
             val bundle= Bundle()
@@ -62,5 +82,4 @@ class MusicAdapter(private val musicClickListener: MusicClickListener,private va
 interface MusicClickListener{
     fun musicClickListener(bundle:Bundle)
 
-    fun checkMusicIsPlay(path:String):Boolean
 }

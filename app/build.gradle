@@ -7,12 +7,11 @@ plugins {
 }
 
 
-
 android {
     namespace 'com.fuadhev.musicplayer'
     compileSdk 33
 
-    buildFeatures{
+    buildFeatures {
         viewBinding true
         dataBinding true
     }
@@ -83,7 +82,6 @@ dependencies {
     implementation 'androidx.media:media:1.6.0'
 
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-
 
 //    implementation "com.github.realgearinc:multi-sliding-up-panel:1.2.4"
 

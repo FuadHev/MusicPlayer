@@ -1,16 +1,19 @@
 package com.fuadhev.musicplayer.ui.fragment.music
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.graphics.BitmapFactory
 import android.os.*
 import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.Animation
+import android.view.animation.LinearInterpolator
+import android.view.animation.RotateAnimation
 import android.widget.SeekBar
 import androidx.annotation.RequiresApi
 import androidx.databinding.DataBindingUtil
@@ -19,7 +22,7 @@ import com.fuadhev.musicplayer.databinding.FragmentMusicBinding
 import com.fuadhev.musicplayer.entity.Music
 import com.fuadhev.musicplayer.service.MusicPlayerService
 import com.fuadhev.musicplayer.utils.CurrentMusic
-import jp.wasabeef.blurry.Blurry
+import com.fuadhev.musicplayer.utils.CurrentMusic.currentMusicLiveData
 
 
 class MusicFragment : Fragment() {
@@ -29,7 +32,6 @@ class MusicFragment : Fragment() {
     private var musicService: MusicPlayerService? = null
     private var isMusicServiceBound = false
     private var position = 0
-    private var currentDuration: Int? = null
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as MusicPlayerService.MusicPlayerBinder
@@ -43,27 +45,19 @@ class MusicFragment : Fragment() {
         }
     }
 
+    @SuppressLint("DiscouragedApi")
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         binding = DataBindingUtil.inflate(inflater, R.layout.fragment_music, container, false)
         // Inflate the layout for this fragment
-//        val originalBitmap = BitmapFactory.decodeResource(resources, R.drawable.b1)
-//
-//// ImageView'ın içeriğini blur yapın ve ImageView'a yükleyin
-//        Blurry.with(requireContext())
-//            .radius(25)
-//            .sampling(10)
-//            .from(originalBitmap)
-//            .into(binding.img)
         return binding.root
     }
 
     override fun onStart() {
         super.onStart()
-        Log.e("music", "onStart: musiconstart")
-        if (musicService == null) {
+
             val bundle = arguments
             // duzgun yol olmadigini bilirem sadece asand olsun deye etmisem
             allmusicList = bundle?.getParcelableArrayList("musics") ?: emptyList()
@@ -75,57 +69,97 @@ class MusicFragment : Fragment() {
                 "musicList",
                 allmusicList as java.util.ArrayList<out Parcelable>
             )
+            binding.mName.text=allmusicList[position].m_name
+            binding.artistName.text=allmusicList[position].artist_name
             requireContext().bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-        }
+
 
     }
 
+    @SuppressLint("DiscouragedApi")
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        Log.e("music", "viewcreated: viewcreated")
+
+        startAnimation()
 
 
-        Handler().postDelayed({
-            initialiseSeekbar()
-
-        }, 500)
 
 
-        Handler().postDelayed({
-            initialiseSeekbar()
+
+//        Handler().postDelayed({
+//            initialiseSeekbar()
+//        }, 500)
+
+
+//        initialiseSeekbar()
+        binding.mName.requestFocus()
+        binding.artistName.requestFocus()
+
+
+        Handler(Looper.getMainLooper()).postDelayed({
             // Eğer müzik duraksı ise, en son bilinen konumdan devam et
-            musicService?.playSong(allmusicList[position].path)
+            if(CurrentMusic.currentMusic.value!=allmusicList[position].path){
+                musicService?.songIndex=position
+                musicService?.playSong(allmusicList[position].path)
+            }
+            musicService?.musicIsplaying?.observe(viewLifecycleOwner){
+                if(it){
+                    binding.playPauseFab.setImageResource(R.drawable.pause)
+                    startAnimation()
+//                    binding.play.setImageResource(R.drawable.pause)
+                }else{
+                    binding.playPauseFab.setImageResource(R.drawable.play)
+                    binding.musicImg.clearAnimation()
+//                    binding.play.setImageResource(R.drawable.play)
+
+                }
+            }
+            initialiseSeekbar()
+
         }, 500)
 
 
 
+        currentMusicLiveData.observe(viewLifecycleOwner){
+            val music=it
+            binding.mName.text=music.m_name
+            binding.artistName.text=music.artist_name
 
-        binding.play.setOnClickListener {
+            val resourceId =
+                resources.getIdentifier(it.m_img, "drawable", requireActivity().packageName)
+           binding.musicImg.setImageResource(resourceId)
+        }
+
+        binding.playPauseFab.setOnClickListener {
 
             if (isMusicServiceBound && musicService != null) {
-                initialiseSeekbar()
+
                 if (musicService?.isMusicPlaying() == true) {
                     // Eğer müzik çalıyorsa, duraklat
                     musicService?.pauseSong()
+                    binding.musicImg.clearAnimation()
                 } else {
-
+                    startAnimation()
+//                    initialiseSeekbar()
                     // Eğer müzik duraksı ise, en son bilinen konumdan devam et
                     musicService?.playSong(allmusicList[position].path)
+
                 }
             }
+
         }
 
-        binding.skipNext.setOnClickListener {
+
+        binding.skipNextFab.setOnClickListener {
             musicService?.skipToNextSong()
+
         }
-        binding.skipPrevious.setOnClickListener {
+        binding.skipPreviousFab.setOnClickListener {
             musicService?.skipToPreviousSong()
-        }
 
-        binding.pause.setOnClickListener {
-            musicService?.pauseSong()
         }
-
 
         binding.slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -143,14 +177,47 @@ class MusicFragment : Fragment() {
 
     }
 
+    private fun startAnimation() {
+        val rotateAnimation = RotateAnimation(
+            0f, 360f,
+            Animation.RELATIVE_TO_SELF, 0.5f,
+            Animation.RELATIVE_TO_SELF, 0.5f
+        ).apply {
+            interpolator = LinearInterpolator()
+            repeatCount = Animation.INFINITE
+            duration = 3000
+        }
+        binding.musicImg.startAnimation(rotateAnimation)
+    }
+
     private fun initialiseSeekbar() {
         val mp = musicService?.mediaPlayer
-        binding.slider.max = musicService?.mediaPlayer?.duration!!
-        val handler = Handler()
+        binding.slider.max = 0
+        binding.slider.max = musicService?.mediaPlayer?.duration?:23000
+
+        Log.e("duration", "initialiseSeekbar: ${musicService?.mediaPlayer?.duration}", )
+        Log.e("slidermax", "initialiseSeekbar: ${binding.slider.max}", )
+        Log.e("durationservis", "initialiseSeekbar: ${musicService}", )
+        Log.e("durationplayer", "initialiseSeekbar: ${musicService?.mediaPlayer}", )
+        val handler = Handler(Looper.getMainLooper())
         handler.postDelayed(object : Runnable {
             override fun run() {
                 try {
                     binding.slider.progress = mp!!.currentPosition
+
+                    val currentdurationInMillis = mp.currentPosition
+                    val minutes = (currentdurationInMillis / 1000) / 60
+                    val seconds = (currentdurationInMillis / 1000) % 60
+                    val formattedCurrentDuration = String.format("%02d:%02d", minutes, seconds)
+
+                    val durationInMillis = mp.duration
+                    val dminutes = (durationInMillis / 1000) / 60
+                    val dseconds = (durationInMillis / 1000) % 60
+                    val formattedDuration = String.format("%02d:%02d", dminutes, dseconds)
+
+                    // TextView içinde süreyi gösterin
+                    binding.currentTime.text = formattedCurrentDuration
+                    binding.duration.text = formattedDuration
                     handler.postDelayed(this, 1000)
                 } catch (e: java.lang.Exception) {
                     binding.slider.progress = 0

@@ -3,9 +3,11 @@ package com.fuadhev.musicplayer.ui.fragment.musicList
 import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.os.Parcelable
 import android.provider.MediaStore
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -13,7 +15,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.RequiresApi
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.fuadhev.musicplayer.R
@@ -22,26 +27,48 @@ import com.fuadhev.musicplayer.entity.Music
 import com.fuadhev.musicplayer.service.MusicPlayerService
 import com.fuadhev.musicplayer.ui.adapter.MusicAdapter
 import com.fuadhev.musicplayer.ui.adapter.MusicClickListener
+import com.fuadhev.musicplayer.ui.adapter.MusicLPAdapter
+import com.fuadhev.musicplayer.ui.adapter.MusicLPClickListener
 import com.fuadhev.musicplayer.utils.CurrentMusic
+import dagger.hilt.android.AndroidEntryPoint
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
 import kotlin.math.log
 import kotlin.random.Random
 
-
+@AndroidEntryPoint
 class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
 
     //    Glide.with(this)
 //    .load(R.drawable.your_drawable_resource) // Drawable kaynağını belirtin
 //    .transition(DrawableTransitionOptions.withCrossFade())
 //    .into(imageView)
+    private val READ_EXTERNAL_STORAGE_PERMISSION_CODE = 1
     private val RC_STORAGE_PERMISSION = 123
     private val RC_NOTIFICATION_PERMISSION = 456
     private lateinit var binding: FragmentMusicListBinding
+    private val viewModel by viewModels<MusicListViewModel>()
     private val musicAdapter by lazy {
         MusicAdapter(this,object : MusicClickListener {
             override fun musicClickListener(bundle: Bundle) {
                 findNavController().navigate(R.id.action_musicListFragment_to_musicFragment,bundle)
+            }
+
+        }, emptyList())
+    }
+    private val musicLPAdapter by lazy {
+        MusicLPAdapter(object :MusicLPClickListener{
+            override fun musicClickListener(path: String) {
+                val clickedMusic=musicList.find {
+                    it.path==path
+                }
+                val position=musicList.indexOf(clickedMusic)
+
+                val bundle= Bundle()
+                bundle.putParcelableArrayList("musics",musicList as java.util.ArrayList<out Parcelable>)
+                bundle.putInt("position",position)
+                findNavController().navigate(R.id.action_musicListFragment_to_musicFragment,bundle)
+
             }
 
         }, emptyList())
@@ -57,21 +84,36 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
         return binding.root
     }
 
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         musicList = ArrayList()
+
         setRecyclerview()
         checkPermission()
-
-
-
-
+        observes()
+    }
+    private fun observes(){
+        viewModel.lastPlayedMusics.observe(viewLifecycleOwner){
+            if (it.isNotEmpty()){
+                val sortedList=it.sortedByDescending {music->
+                    music.lastPlayTime
+                }
+                musicLPAdapter.updateList(sortedList)
+            }else{
+                musicLPAdapter.updateList(musicList)
+            }
+        }
     }
 
     private fun setRecyclerview() {
         binding.musicRv.layoutManager = LinearLayoutManager(requireContext())
         binding.musicRv.adapter = musicAdapter
+
+        binding.musicLpRv.layoutManager=LinearLayoutManager(requireContext(),LinearLayoutManager.HORIZONTAL,false)
+        binding.musicLpRv.adapter = musicLPAdapter
+
     }
 
     @SuppressLint("Range")
@@ -84,9 +126,15 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
             MediaStore.Audio.Media.ARTIST,
             MediaStore.Audio.Media.DURATION
         )
-
         val selection =
             "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%WhatsApp/Media/WhatsApp Audio%'"
+//        val selection = """
+//    ${MediaStore.Audio.Media.IS_MUSIC} != 0
+//    AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%WhatsApp/Media/WhatsApp Audio%'
+//    AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%Sounds%'
+//"""
+
+// Diğer işlemler ve izin kontrolleri burada devam eder
 
         val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
@@ -121,8 +169,6 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun checkPermission() {
-
-
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
             if (EasyPermissions.hasPermissions(
                     requireActivity(),
@@ -131,6 +177,7 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
                 )
             ) {
                 loadMusic()
+                viewModel.getLastPlayedMusic()
                 // İzin zaten alındı, devam etmek için gerekli işlemleri yapabilirsiniz
             } else {
 //            // İzin alınmamış, iste
@@ -143,7 +190,15 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
 
                 )
             }
-        }else{
+        }
+//        if (ContextCompat.checkSelfPermission(requireActivity(), android.Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+//            // İzin talebi yap
+//            ActivityCompat.requestPermissions(requireActivity(), arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE), READ_EXTERNAL_STORAGE_PERMISSION_CODE)
+//        } else {
+//            loadMusic()
+//            // İzin zaten verilmiş, işlemlerinizi yapabilirsiniz
+//        }
+        else{
             if (EasyPermissions.hasPermissions(
                     requireActivity(),
                 android.Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -151,6 +206,7 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
                 )
             ) {
                 loadMusic()
+                viewModel.getLastPlayedMusic()
                 // İzin zaten alındı, devam etmek için gerekli işlemleri yapabilirsiniz
             } else {
 //            // İzin alınmamış, iste
@@ -159,7 +215,6 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
                     "The app requires external storage permission to run.",
                     RC_STORAGE_PERMISSION,
                     android.Manifest.permission.READ_EXTERNAL_STORAGE,
-                    android.Manifest.permission.READ_MEDIA_AUDIO,
 
 //                    android.Manifest.permission.READ_MEDIA_AUDIO
                 )
@@ -197,17 +252,26 @@ class MusicListFragment : Fragment(), EasyPermissions.PermissionCallbacks {
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == READ_EXTERNAL_STORAGE_PERMISSION_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // İzin verildi, müziği çalmaya devam edebilirsiniz
+                Log.e("permission garanted", "onRequestPermissionsResult: permission garanted ", )
+            } else {
+                // İzin verilmedi, gerekli işlemleri yapabilirsiniz (uyarı gösterme vb.)
+                Log.e("permission garanted", "onRequestPermissionsResult: permission no garanted ", )
+
+            }
+        }
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         // İzin sonuçlarını EasyPermissions'a iletin
-
-
-
         EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
     }
 
     override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
         // İzinler verildiğinde yapılacak işlemleri buraya ekleyebilirsiniz
         loadMusic()
+        viewModel.getLastPlayedMusic()
     }
 
     override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {

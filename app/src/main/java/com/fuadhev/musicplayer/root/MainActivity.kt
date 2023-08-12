@@ -8,7 +8,9 @@ import androidx.annotation.RequiresApi
 import com.fuadhev.musicplayer.R
 import com.fuadhev.musicplayer.service.MusicPlayerService
 import com.fuadhev.musicplayer.utils.CurrentMusic
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {

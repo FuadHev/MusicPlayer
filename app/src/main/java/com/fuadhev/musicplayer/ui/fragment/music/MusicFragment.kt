@@ -23,8 +23,9 @@ import com.fuadhev.musicplayer.entity.Music
 import com.fuadhev.musicplayer.service.MusicPlayerService
 import com.fuadhev.musicplayer.utils.CurrentMusic
 import com.fuadhev.musicplayer.utils.CurrentMusic.currentMusicLiveData
+import dagger.hilt.android.AndroidEntryPoint
 
-
+@AndroidEntryPoint
 class MusicFragment : Fragment() {
 
     private lateinit var binding: FragmentMusicBinding
@@ -192,7 +193,6 @@ class MusicFragment : Fragment() {
 
     private fun initialiseSeekbar() {
         val mp = musicService?.mediaPlayer
-        binding.slider.max = 0
         binding.slider.max = musicService?.mediaPlayer?.duration?:23000
 
         Log.e("duration", "initialiseSeekbar: ${musicService?.mediaPlayer?.duration}", )

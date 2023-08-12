@@ -49,6 +49,8 @@ class MusicAdapter(val owner:LifecycleOwner,private val musicClickListener: Musi
         val resourceId = context.resources.getIdentifier(music.m_img, "drawable", context.packageName)
         b.musicImg.setImageResource(resourceId)
 
+
+
         b.musicName.text=music.m_name
         CurrentMusic.currentMusic.observe(owner){
             if (it!=null){
@@ -57,9 +59,9 @@ class MusicAdapter(val owner:LifecycleOwner,private val musicClickListener: Musi
                     b.lottie.visibility= VISIBLE
                     b.lottie.playAnimation()
                     b.musicName.requestFocus()
-
+                    b.musicName.setTextColor(Color.BLACK)
                 }else{
-                    b.musicItem.setBackgroundResource(R.drawable.noplay_bg)
+                    b.musicName.setTextColor(Color.WHITE)
                     b.lottie.visibility=GONE
                     b.lottie.cancelAnimation()
 

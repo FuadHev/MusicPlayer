@@ -1,0 +1,64 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "ba1296378c8eafa578814f9d6b670161",
+    "entities": [
+      {
+        "tableName": "Music",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`n_name` TEXT NOT NULL, `artist_name` TEXT NOT NULL, `album` TEXT NOT NULL, `path` TEXT NOT NULL, `m_img` TEXT NOT NULL, `lastPlayTime` INTEGER NOT NULL, PRIMARY KEY(`n_name`))",
+        "fields": [
+          {
+            "fieldPath": "m_name",
+            "columnName": "n_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artist_name",
+            "columnName": "artist_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "album",
+            "columnName": "album",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "path",
+            "columnName": "path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "m_img",
+            "columnName": "m_img",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastPlayTime",
+            "columnName": "lastPlayTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "n_name"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ba1296378c8eafa578814f9d6b670161')"
+    ]
+  }
+}

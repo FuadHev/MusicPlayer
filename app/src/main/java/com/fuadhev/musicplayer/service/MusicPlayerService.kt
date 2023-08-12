@@ -20,11 +20,20 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
 import com.fuadhev.musicplayer.R
 import com.fuadhev.musicplayer.entity.Music
+import com.fuadhev.musicplayer.repo.Repository
 import com.fuadhev.musicplayer.root.MainActivity
 import com.fuadhev.musicplayer.utils.CurrentMusic
 import com.fuadhev.musicplayer.utils.CurrentMusic.currentMusicLiveData
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import java.io.File
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MusicPlayerService : Service() {
 
     private val TAG = "MusicService"
@@ -34,6 +43,9 @@ class MusicPlayerService : Service() {
     private var currentMusic: String = ""
     private lateinit var mediaSession: MediaSessionCompat
     val musicIsplaying=MutableLiveData<Boolean>()
+
+    @Inject
+    lateinit var repo:Repository
 
     override fun onCreate() {
         super.onCreate()
@@ -95,7 +107,6 @@ class MusicPlayerService : Service() {
     }
 
     override fun onDestroy() {
-        Log.d(TAG, "onDestroy() called")
         // Release the MediaPlayer object
         mediaPlayer.release()
     }
@@ -120,8 +131,9 @@ class MusicPlayerService : Service() {
                 mediaPlayer.prepare()
                 currentMusic = songPath!!
                 val music = songs[songIndex]
+//   /storage/emulated/0/Sounds/20230118_213636.m4a
 
-                Log.e("indexservis", "playSong: $songIndex", )
+                Log.e("songpath", "playSong: $songPath")
                 val context: Context = applicationContext
                 val resourceId =
                     resources.getIdentifier(music.m_img, "drawable", context.packageName)
@@ -130,6 +142,12 @@ class MusicPlayerService : Service() {
                 currentMusicLiveData.postValue(songs[songIndex])
                 CurrentMusic.currentMusic.postValue(songPath)
                 // Start playing the song
+                music.lastPlayTime=System.currentTimeMillis()
+
+                CoroutineScope(IO).launch {
+                    repo.insertMusic(music)
+                }
+
                 mediaPlayer.start()
             } else {
                 mediaPlayer.start()
@@ -145,9 +163,9 @@ class MusicPlayerService : Service() {
         return mediaPlayer.isPlaying
     }
 
-    fun seekTo(progress: Int) {
-        mediaPlayer.seekTo(progress)
-    }
+//    fun seekTo(progress: Int) {
+//        mediaPlayer.seekTo(progress)
+//    }
     // Bu özel seekTo yöntemini ekleyin
 
     fun pauseSong() {
@@ -289,7 +307,7 @@ class MusicPlayerService : Service() {
 //    }
 
     companion object {
-        const val ACTION_PLAY = "com.fuadhev.musicplayer.action.PLAY"
+//        const val ACTION_PLAY = "com.fuadhev.musicplayer.action.PLAY"
         const val ACTION_PLAY_PAUSE = "com.fuadhev.musicplayer.action.PLAY_PAUSE"
         const val ACTION_PREVIOUS = "com.fuadhev.musicplayer.action.PREVIOUS"
         const val ACTION_NEXT = "com.fuadhev.musicplayer.action.NEXT"

@@ -3,7 +3,7 @@
 
 <!--    <solid android:color="@color/purple_700"/>-->
     <gradient android:angle="270"
-        android:startColor="@color/purple_200"
+        android:startColor="#6E17D8"
         android:endColor="#0A071E"
 
         />

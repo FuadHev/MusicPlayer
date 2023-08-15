@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/home_nav_graph"
-    app:startDestination="@id/musicListFragment">
+    app:startDestination="@id/splashScreenFragment">
 
     <fragment
         android:id="@+id/musicListFragment"
@@ -19,4 +19,15 @@
         android:name="com.fuadhev.musicplayer.ui.fragment.music.MusicFragment"
         android:label="MusicFragment"
         tools:layout="@layout/fragment_music"/>
+    <fragment
+        android:id="@+id/splashScreenFragment"
+        android:name="com.fuadhev.musicplayer.ui.fragment.splashscreen.SplashScreenFragment"
+        android:label="fragment_splash_screen"
+        tools:layout="@layout/fragment_splash_screen" >
+        <action
+            android:id="@+id/action_splashScreenFragment_to_musicListFragment"
+            app:destination="@id/musicListFragment"
+            app:popUpTo="@id/splashScreenFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
 </navigation>
